@@ -16,9 +16,15 @@ struct VertexOutput {
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
-    out.clip_position = mesh_position_local_to_clip(mesh.model, vec4<f32>(vertex.position, 1.0));
+
+    out.world_position = mesh_position_local_to_world(mesh.model, vec4<f32>(vertex.position, 1.0));
+
+    out.world_position += vec4(out.world_normal, 1.0) * sin(globals.time) * 0.5;
+
+    out.clip_position = mesh_position_world_to_clip(out.world_position);
     out.world_normal = mesh_normal_local_to_world(vertex.normal);
     out.uv = vertex.uv;
+
     return out;
 }
 
@@ -28,5 +34,5 @@ struct FragmentInput {
 
 @fragment
 fn fragment(input: FragmentInput) -> @location(0) vec4<f32> {
-    return vec4(input.uv, 0.0, 1.0);
+    return vec4(input.world_normal, 1.0);
 }
