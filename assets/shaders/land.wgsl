@@ -4,12 +4,17 @@
 
 #import bevy_shader_utils::perlin_noise_2d
 
-struct LandMaterial {
-    color: vec4<f32>,
-}
+//struct LandMaterial {
+//    color: vec4<f32>,
+//    offset: f32,
+//}
 
+//@group(1) @binding(0)
+//var<uniform> material: LandMaterial;
 @group(1) @binding(0)
-var<uniform> material: LandMaterial;
+var<uniform> color: vec4<f32>;
+@group(1) @binding(1)
+var<uniform> offset: f32;
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -22,7 +27,7 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     #import bevy_pbr::mesh_vertex_output
     @location(10) color: vec3<f32>,
-};
+}
 
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
@@ -31,9 +36,9 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.world_normal = mesh_normal_local_to_world(vertex.normal);
 
     var position = vertex.position;
-    var height = perlinNoise2(vec2<f32>(position.x, position.z));
+    var height = perlinNoise2(vec2<f32>(position.x + offset, position.z + offset));
     var offset_noise = perlinNoise2(vec2<f32>(position.z, position.x));
-    position.y += height + sin(position.x * position.z + globals.time) * 0.05;
+    position.y += height + sin(position.x * position.z + globals.time) * 0.08;
     out.color = vec3<f32>(0.2, height, height);
 
     out.world_position = mesh_position_local_to_world(mesh.model, vec4<f32>(position, 1.0));

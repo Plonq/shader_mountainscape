@@ -27,12 +27,15 @@ fn main() {
         .add_plugin(PanOrbitCameraPlugin)
         .add_plugin(WireframePlugin)
         .add_startup_system(setup)
-        .add_systems((move_cube, move_land))
+        .add_systems((move_cube, move_land, move_camera))
         .run();
 }
 
 #[derive(Component)]
 struct Land;
+
+#[derive(Component)]
+struct Camera;
 
 fn setup(
     mut commands: Commands,
@@ -40,16 +43,37 @@ fn setup(
     mut ship_materials: ResMut<Assets<ShipMaterial>>,
     mut land_materials: ResMut<Assets<LandMaterial>>,
 ) {
-    // land
+    // land 1
     commands.spawn((
         MaterialMeshBundle {
             mesh: meshes.add(Mesh::from(shape::Plane {
-                size: 600.0,
-                subdivisions: 2000,
+                size: 300.0,
+                subdivisions: 1500,
             })),
-            transform: Transform::from_xyz(0.0, 0.0, -300.0),
+            transform: Transform::from_xyz(0.0, -2.0, -150.0),
             material: land_materials.add(LandMaterial {
                 color: Color::GREEN,
+                offset: 0.0,
+                alpha_mode: AlphaMode::Opaque,
+            }),
+            ..default()
+        },
+        // Wireframe,
+        Land,
+    ));
+
+    // land 2
+    commands.spawn((
+        MaterialMeshBundle {
+            mesh: meshes.add(Mesh::from(shape::Plane {
+                size: 300.0,
+                subdivisions: 1500,
+            })),
+            transform: Transform::from_xyz(0.0, 2.0, -150.0)
+                .with_rotation(Quat::from_rotation_z(180f32.to_radians())),
+            material: land_materials.add(LandMaterial {
+                color: Color::GREEN,
+                offset: 1000.0,
                 alpha_mode: AlphaMode::Opaque,
             }),
             ..default()
@@ -59,28 +83,28 @@ fn setup(
     ));
 
     // ship
-    let mut mesh = Mesh::from(shape::Cube { size: 1.0 });
-    if let Some(VertexAttributeValues::Float32x3(positions)) =
-        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
-    {
-        let colors: Vec<[f32; 4]> = positions
-            .iter()
-            .map(|[r, g, b]| [(1. - *r) / 2., (1. - *g) / 2., (1. - *b) / 2., 1.])
-            .collect();
-        // mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-    }
-    commands.spawn((
-        MaterialMeshBundle {
-            mesh: meshes.add(mesh),
-            transform: Transform::from_xyz(0.0, 1.0, -5.0),
-            material: ship_materials.add(ShipMaterial {
-                color: Color::RED,
-                alpha_mode: AlphaMode::Opaque,
-            }),
-            ..default()
-        },
-        Movable,
-    ));
+    // let mut mesh = Mesh::from(shape::Cube { size: 1.0 });
+    // if let Some(VertexAttributeValues::Float32x3(positions)) =
+    //     mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+    // {
+    //     let colors: Vec<[f32; 4]> = positions
+    //         .iter()
+    //         .map(|[r, g, b]| [(1. - *r) / 2., (1. - *g) / 2., (1. - *b) / 2., 1.])
+    //         .collect();
+    //     // mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    // }
+    // commands.spawn((
+    //     MaterialMeshBundle {
+    //         mesh: meshes.add(mesh),
+    //         transform: Transform::from_xyz(0.0, 1.0, -5.0),
+    //         material: ship_materials.add(ShipMaterial {
+    //             color: Color::RED,
+    //             alpha_mode: AlphaMode::Opaque,
+    //         }),
+    //         ..default()
+    //     },
+    //     Movable,
+    // ));
 
     // camera
     commands.spawn((
@@ -88,11 +112,12 @@ fn setup(
             // transform: Transform::from_xyz(0.0, 1.0, 1.0).looking_at(Vec3::Y, Vec3::Y),
             ..default()
         },
-        PanOrbitCamera {
-            radius: 1.0,
-            focus: Vec3::Y,
-            ..default()
-        },
+        Camera,
+        // PanOrbitCamera {
+        //     radius: 1.0,
+        //     focus: Vec3::ZERO,
+        //     ..default()
+        // },
     ));
 }
 
@@ -150,5 +175,11 @@ fn move_cube(
 fn move_land(time: Res<Time>, mut land_q: Query<&mut Transform, With<Land>>) {
     for mut land in land_q.iter_mut() {
         land.translation.z += time.delta_seconds();
+    }
+}
+
+fn move_camera(time: Res<Time>, mut camera_q: Query<&mut Transform, With<Camera>>) {
+    for mut camera in camera_q.iter_mut() {
+        camera.rotate_z(10f32.to_radians() * time.delta_seconds());
     }
 }

@@ -8,6 +8,8 @@ use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 pub struct LandMaterial {
     #[uniform(0)]
     pub color: Color,
+    #[uniform(1)]
+    pub offset: f32,
     pub alpha_mode: AlphaMode,
 }
 
