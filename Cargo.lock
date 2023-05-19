@@ -2623,7 +2623,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "shader-test"
+name = "shader_mountainscape"
 version = "0.1.0"
 dependencies = [
  "bevy",
