@@ -1,31 +1,81 @@
-use bevy::{
-    prelude::*,
-    reflect::TypeUuid,
-    render::render_resource::{AsBindGroup, ShaderRef},
-};
+use crate::material::LandMaterial;
+use bevy::pbr::wireframe::{Wireframe, WireframePlugin};
+use bevy::prelude::*;
+use bevy::render::mesh::VertexAttributeValues;
+use bevy::render::settings::{WgpuFeatures, WgpuSettings};
+use bevy::render::RenderPlugin;
+use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
+use bevy_shader_utils::ShaderUtilsPlugin;
+use itertools::Itertools;
+use material::ShipMaterial;
 use std::f32::consts::TAU;
+
+mod material;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(MaterialPlugin::<CustomMaterial>::default())
+        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .add_plugins(DefaultPlugins.set(RenderPlugin {
+            wgpu_settings: WgpuSettings {
+                features: WgpuFeatures::POLYGON_MODE_LINE,
+                ..default()
+            },
+        }))
+        .add_plugin(MaterialPlugin::<ShipMaterial>::default())
+        .add_plugin(MaterialPlugin::<LandMaterial>::default())
+        .add_plugin(ShaderUtilsPlugin)
+        .add_plugin(PanOrbitCameraPlugin)
+        .add_plugin(WireframePlugin)
         .add_startup_system(setup)
-        .add_systems((move_cube,))
+        .add_systems((move_cube, move_land))
         .run();
 }
+
+#[derive(Component)]
+struct Land;
 
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<CustomMaterial>>,
+    mut ship_materials: ResMut<Assets<ShipMaterial>>,
+    mut land_materials: ResMut<Assets<LandMaterial>>,
 ) {
-    // cube
+    // land
     commands.spawn((
         MaterialMeshBundle {
-            mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-            transform: Transform::from_xyz(0.0, 0.5, 0.0),
-            material: materials.add(CustomMaterial {
-                alpha_mode: AlphaMode::Blend,
+            mesh: meshes.add(Mesh::from(shape::Plane {
+                size: 600.0,
+                subdivisions: 2000,
+            })),
+            transform: Transform::from_xyz(0.0, 0.0, -300.0),
+            material: land_materials.add(LandMaterial {
+                color: Color::GREEN,
+                alpha_mode: AlphaMode::Opaque,
+            }),
+            ..default()
+        },
+        // Wireframe,
+        Land,
+    ));
+
+    // ship
+    let mut mesh = Mesh::from(shape::Cube { size: 1.0 });
+    if let Some(VertexAttributeValues::Float32x3(positions)) =
+        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+    {
+        let colors: Vec<[f32; 4]> = positions
+            .iter()
+            .map(|[r, g, b]| [(1. - *r) / 2., (1. - *g) / 2., (1. - *b) / 2., 1.])
+            .collect();
+        // mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    }
+    commands.spawn((
+        MaterialMeshBundle {
+            mesh: meshes.add(mesh),
+            transform: Transform::from_xyz(0.0, 1.0, -5.0),
+            material: ship_materials.add(ShipMaterial {
+                color: Color::RED,
+                alpha_mode: AlphaMode::Opaque,
             }),
             ..default()
         },
@@ -33,10 +83,17 @@ fn setup(
     ));
 
     // camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3dBundle {
+            // transform: Transform::from_xyz(0.0, 1.0, 1.0).looking_at(Vec3::Y, Vec3::Y),
+            ..default()
+        },
+        PanOrbitCamera {
+            radius: 1.0,
+            focus: Vec3::Y,
+            ..default()
+        },
+    ));
 }
 
 #[derive(Component)]
@@ -90,25 +147,8 @@ fn move_cube(
     }
 }
 
-// This is the struct that will be passed to your shader
-#[derive(AsBindGroup, TypeUuid, Debug, Clone)]
-#[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
-pub struct CustomMaterial {
-    alpha_mode: AlphaMode,
-}
-
-/// The Material trait is very configurable, but comes with sensible defaults for all methods.
-/// You only need to implement functions for features that need non-default behavior. See the Material api docs for details!
-impl Material for CustomMaterial {
-    fn vertex_shader() -> ShaderRef {
-        "shaders/shader_mat.wgsl".into()
-    }
-
-    fn fragment_shader() -> ShaderRef {
-        "shaders/shader_mat.wgsl".into()
-    }
-
-    fn alpha_mode(&self) -> AlphaMode {
-        self.alpha_mode
+fn move_land(time: Res<Time>, mut land_q: Query<&mut Transform, With<Land>>) {
+    for mut land in land_q.iter_mut() {
+        land.translation.z += time.delta_seconds();
     }
 }
