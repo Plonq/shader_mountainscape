@@ -8,5 +8,3 @@ edition = "2021"
 [dependencies]
 bevy = "0.10"
 bevy_shader_utils = { git = "https://github.com/rust-adventure/bevy-examples.git", branch = "main" }
-bevy_panorbit_camera = "0.4.3"
-itertools = "0.10.5"
